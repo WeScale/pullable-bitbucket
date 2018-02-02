@@ -4,7 +4,7 @@
 
   vars:
     bitbucket_ebs_path: "/opt/ebs"
-    bitbucket_ebs_device: "/dev/xdg"
+    bitbucket_ebs_device: "/dev/xvdg"
     bitbucket_ebs_fstype: "ext4"
 
   pre_tasks:

@@ -1,15 +1,8 @@
 ---
-- import_playbook: "_build_group.yml"
-  vars:
-    base_role: settlers-base
-    stack_name: bitbucket
-    target_group_name: repo
-
 - hosts: localhost
   become: yes
 
   vars:
-    deploy_env: sec
     gitlab_ebs_path: "/opt/ebs"
 
   pre_tasks:

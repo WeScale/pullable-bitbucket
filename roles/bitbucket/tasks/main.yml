@@ -132,7 +132,7 @@
     'server.secure': "true"
     'keyserver.scheme': "https"
     'server.proxy-port': "443"
-    'server.proxy-name': "code.sec.cloud.bforbank.com"
+    'server.proxy-name': "{{ external_url }}"
   notify: restart bitbucket
 
 - systemd:

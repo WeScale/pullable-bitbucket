@@ -4,26 +4,30 @@
 
   vars:
     bitbucket_ebs_path: "/opt/ebs"
+    bitbucket_ebs_device: "/dev/xdg"
+    bitbucket_ebs_fstype: "ext4"
 
   pre_tasks:
-    - name: retrieve instance metadata
+    - name: Retrieve instance metadata
       ec2_metadata_facts:
 
-    - ec2_vol:
+    - name: Claim ebs volume
+      ec2_vol:
         region: eu-west-1
         id: "{{ ansible_local.ebs.id }}"
         instance: "{{ ansible_ec2_instance_id }}"
-        device_name: /dev/xvdg
+        device_name: "{{ bitbucket_ebs_device }}"
 
-    - filesystem:
-        fstype: ext4
-        dev: /dev/xvdg
+    - name: Create volume filesystem
+      filesystem:
+        fstype: "{{ bitbucket_ebs_fstype }}"
+        dev: "{{ bitbucket_ebs_device }}"
 
-    - name: Mount up device by label
+    - name: Mount volume
       mount:
         path: "{{ bitbucket_ebs_path }}"
-        src: "/dev/xvdg"
-        fstype: "ext4"
+        src: "{{ bitbucket_ebs_device }}"
+        fstype: "{{ bitbucket_ebs_fstype }}"
         state: mounted
 
   roles:

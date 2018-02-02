@@ -1,0 +1,4 @@
+---
+# defaults file for bitbucket
+bitbucket_home: /opt/ebs/bitbucket
+bitbucket_user: bitbucket

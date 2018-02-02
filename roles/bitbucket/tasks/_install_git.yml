@@ -1,0 +1,24 @@
+---
+- get_url:
+    url: https://github.com/git/git/archive/v2.15.1.tar.gz
+    dest: /usr/src/git-2.15.1.tar.gz
+
+- unarchive:
+    src: /usr/src/git-2.15.1.tar.gz
+    dest: /usr/src
+    remote_src: yes
+    creates: /usr/src/git-2.15.1
+
+- make:
+    chdir: /usr/src/git-2.15.1
+    target: "{{ item }}"
+    params:
+      prefix: /usr/local
+  with_items:
+    - all
+    - install
+
+- copy:
+    dest: /etc/profile.d/local_bin.sh
+    content: |-
+      pathmunge /usr/local/bin before

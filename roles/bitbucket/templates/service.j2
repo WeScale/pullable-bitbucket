@@ -1,0 +1,14 @@
+[Unit]
+Description=Atlassian Bitbucket Server Service
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User={{ bitbucket_user }}
+Environment=JAVA_HOME=/etc/alternatives/java_sdk_1.8.0
+Environment=BITBUCKET_HOME={{ bitbucket_home }}
+ExecStart={{ bitbucket_home }}/atlassian-bitbucket-5.6.1/bin/start-bitbucket.sh
+ExecStop={{ bitbucket_home }}/atlassian-bitbucket-5.6.1/bin/stop-bitbucket.sh
+
+[Install]
+WantedBy=multi-user.target

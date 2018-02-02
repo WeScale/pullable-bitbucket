@@ -1,0 +1,49 @@
+---
+- import_playbook: "_build_group.yml"
+  vars:
+    base_role: settlers-base
+    stack_name: bitbucket
+    target_group_name: repo
+
+- hosts: localhost
+  become: yes
+
+  vars:
+    deploy_env: sec
+    gitlab_ebs_path: "/opt/ebs"
+
+  pre_tasks:
+    - shell: >-
+        cat /root/ebs_id
+      register: ebs_id_raw
+      changed_when: no
+
+    - ec2_vol_facts:
+        region: eu-west-1
+        filters:
+          volume-id: "{{ ebs_id_raw.stdout }}"
+      register: ebs_facts
+
+    - ec2_vol:
+        region: eu-west-1
+        id: "{{ ebs_facts.volumes[0].id }}"
+        instance: "{{ inventory_hostname }}"
+        device_name: /dev/xvdg
+
+    - filesystem:
+        fstype: ext4
+        dev: /dev/xvdg
+
+    - name: Mount up device by label
+      mount:
+        path: "{{ gitlab_ebs_path }}"
+        src: "/dev/xvdg"
+        fstype: "ext4"
+        state: mounted
+
+    - name: set timezone to (guess what)
+      timezone:
+        name: UTC
+
+  roles:
+    - bitbucket

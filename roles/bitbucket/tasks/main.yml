@@ -1,0 +1,142 @@
+---
+
+- name: install packages
+  yum:
+    name: "{{ item }}"
+  with_items:
+    - curl-devel
+    - expat-devel
+    - gettext-devel
+    - openssl-devel
+    - zlib-devel
+    - gcc
+    - perl-ExtUtils-MakeMaker
+    - postgresql-server
+    - java-1.8.0-openjdk-devel
+    - httpd
+
+- name: install psycopg2
+  pip:
+    name: psycopg2
+
+- name: remove packaged git
+  yum:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - git
+
+- shell: >-
+    git --version
+  register: git_check
+  failed_when: no
+  changed_when: no
+
+- debug:
+    var: git_check
+
+- include_tasks: _install_git.yml
+  when: git_check.rc != 0 or git_check.stdout|search('2.15.1')
+
+- include_tasks: _install_postfix.yml
+
+- group:
+    name: "{{ bitbucket_user }}"
+    system: yes
+
+- user:
+    name: "{{ bitbucket_user }}"
+    group: "{{ bitbucket_user }}"
+    system: yes
+    createhome: no
+    home: "{{ bitbucket_home }}"
+
+- file:
+    path: "{{ bitbucket_home }}"
+    state: directory
+    owner: "{{ bitbucket_user }}"
+    group: "{{ bitbucket_user }}"
+    mode: 0700
+
+- get_url:
+    url: https://www.atlassian.com/software/stash/downloads/binary/atlassian-bitbucket-5.6.1.tar.gz
+    dest: /var/cache/atlassian-bitbucket-5.6.1.tar.gz
+
+- unarchive:
+    src: /var/cache/atlassian-bitbucket-5.6.1.tar.gz
+    dest: "{{ bitbucket_home }}"
+    remote_src: yes
+  become_user: "{{ bitbucket_user }}"
+
+- copy:
+    dest: /etc/profile.d/java_home.sh
+    content: |-
+      export JAVA_HOME=/etc/alternatives/java_sdk_1.8.0
+
+- copy:
+    dest: "{{ bitbucket_home }}/.profile"
+    content: |-
+      umask 0027
+
+- file:
+    path: /opt/ebs/pgdata
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0700
+
+- shell: >-
+    initdb /opt/ebs/pgdata
+  args:
+    creates: /opt/ebs/pgdata/postgresql.conf
+  become_user: postgres
+
+- lineinfile:
+    path: /usr/lib/systemd/system/postgresql.service
+    regexp: >-
+      ^Environment=PGDATA=.*$
+    line:
+      Environment=PGDATA=/opt/ebs/pgdata
+    insertafter: >-
+      ^\[Service\]$
+
+- selinux:
+    state: disabled
+
+- service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- postgresql_db:
+    name: "{{ bitbucket_user }}"
+
+- postgresql_user:
+    db: "{{ bitbucket_user }}"
+    name: "{{ bitbucket_user }}"
+    priv: "ALL"
+    state: present
+
+- template:
+    src: service.j2
+    dest: /usr/lib/systemd/system/bitbucket.service
+  tags: conf
+
+- lineinfile:
+    dest: "{{ bitbucket_home }}/shared/bitbucket.properties"
+    regexp: >-
+      {{ item.key }}=.*
+    line: >-
+      {{ item.key }}={{ item.value }}
+  with_dict:
+    'server.secure': "true"
+    'keyserver.scheme': "https"
+    'server.proxy-port': "443"
+    'server.proxy-name': "code.sec.cloud.bforbank.com"
+  notify: restart bitbucket
+
+- systemd:
+    daemon_reload: yes
+    name: bitbucket
+    state: started
+  tags: conf
